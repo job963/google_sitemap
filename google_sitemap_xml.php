@@ -6,15 +6,15 @@
 * -----------------------------------------------
 * by DIATOM Internet & Medien GmbH // 27.07.2009
 * by Proud Sourcing GmbH // 19.07.2013
-* by Joachim Barthel  // 25.07.2016
+* by Joachim Barthel  // 25.07.2016 & 20.06.2017
 * -----------------------------------------------
 *
 * / install
 *
 *(1) insert your paths and data below //configuration
-*(2) upload file to your webspace
+*(2) upload file to your webspace (recommended to /bin folder)
 *(3) adjust chmod if needed
-*(4) open with your browser
+*(4) open with your browser or run on command line with 'php google_sitemap_xml.php'
 *(5) open sitemap.xml and check content
 *
 * / transfer to google
@@ -47,8 +47,8 @@ class ShopConfig
 {
     public function __construct()
     {
-        //$sShopDir = './';   // if stored in shop root
-        $sShopDir = '../';  // if stored eg. in /bin folder
+        //$sShopDir = './';     // if stored in shop root
+        $sShopDir = '../';      // if stored eg. in /bin folder
         include_once( $sShopDir.'config.inc.php');
 
         /* append sShopURL with / */
@@ -68,21 +68,22 @@ $mod_cnf['dbpass']              = $shopConfig->dbPwd;		// dbpass
 
 // configuration data
 $mod_cnf['filepath']            = $shopConfig->sShopDir . '/export/';						// fullpath to sitemaps
-$mod_cnf['filename']            = 'sitemap';			// basename for sitemaps
-$mod_cnf['offset']              = 20000;					// how many product-urls in each sitemap? (max. allowed: 50.000 urls (total, with cats and cms) && max. filesize: 10Mb (uncompressed!))         
+$mod_cnf['filename']            = 'sitemap';		    // basename for sitemaps
+$mod_cnf['offset']              = 20000;                    // how many product-urls in each sitemap? (max. allowed: 50.000 urls (total, with cats and cms) && max. filesize: 10Mb (uncompressed!))         
 $mod_cnf['language']            = 0;                        // shop language id
-$mod_cnf['expired']             = true;                     // true for using also oxseo.oxexpired = 1 (normally only oxseo.oxexpired = 0)
+$mod_cnf['languages']           = getActiveLangIds();       // shop active language ids
+$mod_cnf['expired']             = false;                    // true for using also oxseo.oxexpired = 1 (normally only oxseo.oxexpired = 0)
 
 // configuration export
 $mod_cnf['export_categories']   = true;                     // export categories?
 $mod_cnf['export_products']     = true;                     // export products?
-$mod_cnf['export_products_ma']  = true;                     // export manufacturer products?
-$mod_cnf['export_products_ve']  = true;                     // export vendor products?
-$mod_cnf['export_cms']          = true;                     // export cms pages?
-$mod_cnf['export_vendor']       = true;                     // export vendors?
-$mod_cnf['export_manufacturer'] = true;                     // export manufacturers?
-$mod_cnf['export_tags']         = true;                     // export tags?
-$mod_cnf['export_static']       = true;                      // export static seo urls?
+$mod_cnf['export_products_ma']  = false;                     // export manufacturer products?
+$mod_cnf['export_products_ve']  = false;                     // export vendor products?
+$mod_cnf['export_cms']          = false;                     // export cms pages?
+$mod_cnf['export_vendor']       = false;                     // export vendors?
+$mod_cnf['export_manufacturer'] = false;                     // export manufacturers?
+$mod_cnf['export_tags']         = false;                     // export tags?
+$mod_cnf['export_static']       = false;                     // export static seo urls?
 
 /* ----------------- DO NOT EDIT ANYTHING BEHIND THIS LINE ----------------- */
 
@@ -113,59 +114,66 @@ $cntCalls = ceil(getCountScriptCalls() / $mod_cnf['offset']);
 // store cms- and category-data only at first call, further calls are products only
 if (1 == $pcall)
 {
-    // get cms data from shop - only at first script-run! (-c 1)
-    if($mod_cnf['export_cms'])
-    {
-        $xmlList_cms = getCmsSite();
-    }
-   
-    // get vendor data from shop - only at first script-run! (-c 1)
-    if($mod_cnf['export_vendor'])
-    {
-        $xmlList_vendor = getVendors();
-    }
-    
-    // get manufacturer data from shop - only at first script-run! (-c 1)
-    if($mod_cnf['export_manufacturer'])
-    {
-        $xmlList_manufacturer = getManufacturers();    
-    }
-    
-    // get manufacturer data from shop
-    if($mod_cnf['export_tags'])
-    {
-        $xmlList_tags = getTags();  
-    }
-    
-    // get static seo data from shop
-    if($mod_cnf['export_static'])
-    {
-        $xmlList_static = getStaticUrls();  
-    }    
-    
-    // get all categories
-    if($mod_cnf['export_categories'])
-    {
-        $xmlList_cat = getCategories();
-    }
-    
-    // get vendor products
-    if($mod_cnf['export_products_ve'])
-    {
-        $xmlList_prod_vendor = getProductsVendor();
-    }
+    foreach ($mod_cnf['languages'] as $iLanguage) {
+        $mod_cnf['language'] = $iLanguage;
+        
+        // get cms data from shop - only at first script-run! (-c 1)
+        if($mod_cnf['export_cms'])
+        {
+            $xmlList_cms = array_merge($xmlList_cms, getCmsSite());
+        }
 
-    // get manufacturer products
-    if($mod_cnf['export_products_ma'])
-    {
-        $xmlList_prod_manufacturer = getProductsManufacturer();    
+        // get vendor data from shop - only at first script-run! (-c 1)
+        if($mod_cnf['export_vendor'])
+        {
+            $xmlList_vendor = array_merge($xmlList_vendor, getVendors());
+        }
+
+        // get manufacturer data from shop - only at first script-run! (-c 1)
+        if($mod_cnf['export_manufacturer'])
+        {
+            $xmlList_manufacturer = array_merge($xmlList_manufacturer, getManufacturers());    
+        }
+
+        // get manufacturer data from shop
+        if($mod_cnf['export_tags'])
+        {
+            $xmlList_tags = array_merge($xmlList_tags, getTags());  
+        }
+
+        // get static seo data from shop
+        if($mod_cnf['export_static'])
+        {
+            $xmlList_static = array_merge($xmlList_static, getStaticUrls());  
+        }    
+
+        // get all categories
+        if($mod_cnf['export_categories'])
+        {
+            $xmlList_cat = array_merge($xmlList_cat, getCategories());
+        }
+
+        // get vendor products
+        if($mod_cnf['export_products_ve'])
+        {
+            $xmlList_prod_vendor = array_merge($xmlList_prod_vendor, getProductsVendor());
+        }
+
+        // get manufacturer products
+        if($mod_cnf['export_products_ma'])
+        {
+            $xmlList_prod_manufacturer = array_merge($xmlList_prod_manufacture, getProductsManufacturer());    
+        }
     }
 }
 
 // get products (with offset)
 if($mod_cnf['export_products'])
 {
-    $xmlList_prod = getProducts($pcall);
+    foreach ($mod_cnf['languages'] as $iLanguage) {
+        $mod_cnf['language'] = $iLanguage;
+        $xmlList_prod = array_merge($xmlList_prod, getProducts($pcall));
+    }
 }
 
 $dbh = NULL;
@@ -657,6 +665,28 @@ function createSitemapIndex()
     // write to file
     @file_put_contents($mod_cnf['filename'].'.xml',$sitemapindex);
     return;
+}
+
+
+/**
+ * Return an array of the active language ids
+ * 
+ * @global ShopConfig $shopConfig
+ * @return type
+ */
+function getActiveLangIds()
+{
+    global $shopConfig;
+    include_once $shopConfig->sShopDir . "/bootstrap.php";
+    $oConfig = oxRegistry::getConfig();
+    $aLanguageParams = $oConfig->getConfigParam('aLanguageParams');
+    $aLangIds = array();
+    foreach ($aLanguageParams as $aLanguage) {
+        if ($aLanguage['active'] == 1) {
+            $aLangIds[] = $aLanguage['baseId'];
+        }
+    }
+    return $aLangIds;
 }
 
 ?>
